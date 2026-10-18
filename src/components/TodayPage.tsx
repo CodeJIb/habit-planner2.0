@@ -1,8 +1,8 @@
 import { Sparkles } from 'lucide-react'
 import { useState } from 'react'
-import { Progress } from './ui/progress'
+import { JarvisHud } from './JarvisHud'
 import type { HabitView, PlayerProfile, Task } from '../types'
-import { localToday } from '../lib/dates'
+import { isOverdue } from '../lib/dates'
 
 interface Props {
   tasks: Task[]
@@ -20,8 +20,8 @@ function greetingFor(hour: number): string {
 function todaysOpen(tasks: Task[]): Task[] {
   const open = tasks.filter((t) => t.status !== 'done' && t.status !== 'archived')
   return open.sort((a, b) => {
-    const da = a.dueAt ? a.dueAt.slice(0, 10) : '9999'
-    const db = b.dueAt ? b.dueAt.slice(0, 10) : '9999'
+    const da = a.dueAt ? a.dueAt.slice(0, 16) : '9999'
+    const db = b.dueAt ? b.dueAt.slice(0, 16) : '9999'
     return da.localeCompare(db)
   })
 }
@@ -39,7 +39,6 @@ export function TodayPage({ tasks, habits, profile }: Props) {
   const openHabits = habits.filter((h) => !h.completedToday)
   const best = bestStreak(habits)
   const pct = Math.min(100, Math.round((profile.xpIntoLevel / profile.xpForNext) * 100))
-  const circumference = 2 * Math.PI * 40
 
   return (
     <div className="screen">
@@ -50,65 +49,26 @@ export function TodayPage({ tasks, habits, profile }: Props) {
       </p>
 
       <div className="card" aria-label="Level progress">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-          <div
-            style={{
-              position: 'relative',
-              width: '7rem',
-              height: '7rem',
-              flex: 'none',
-              borderRadius: '9999px',
-            }}
-          >
-            <svg viewBox="0 0 100 100" width="100" height="100" aria-hidden>
-              <circle
-                cx="50"
-                cy="50"
-                r="40"
-                fill="none"
-                stroke="var(--color-accent)"
-                strokeWidth="10"
-                opacity="0.25"
-              />
-              <circle
-                cx="50"
-                cy="50"
-                r="40"
-                fill="none"
-                stroke="var(--color-xp)"
-                strokeWidth="10"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                strokeDashoffset={circumference * (1 - pct / 100)}
-                transform="rotate(-90 50 50)"
-              />
-            </svg>
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'grid',
-                placeItems: 'center',
-                textAlign: 'center',
-              }}
-            >
-              <div>
-                <p style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, lineHeight: 1 }}>
-                  Level {profile.level}
-                </p>
-                <span style={{ fontSize: '0.7rem', color: 'var(--color-muted)' }}>current</span>
-              </div>
+        <h2>Core status</h2>
+        <div
+          className="hero"
+          style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}
+        >
+          <JarvisHud />
+          <div className="grow" style={{ minWidth: 0, flex: 1 }}>
+            <div className="lvl" style={{ fontSize: '1.625rem', fontWeight: 700, lineHeight: 1 }}>
+              Level <span style={{ color: 'var(--gold)' }}>{profile.level}</span>
             </div>
-          </div>
-          <div className="grow" style={{ minWidth: 0 }}>
-            <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.125rem' }}>Level progress</h2>
-            <Progress value={pct} aria-label="XP progress to next level" />
-            <p className="small" style={{ marginTop: '0.375rem' }}>
-              {profile.xpIntoLevel} of {profile.xpForNext} XP to level {profile.level + 1}
+            <div className="bar" style={{ margin: '0.5rem 0 0.375rem' }}>
+              <i style={{ width: `${pct}%` }} />
+            </div>
+            <p className="small" style={{ marginTop: 0 }}>
+              {profile.xpIntoLevel} / {profile.xpForNext} XP to level {profile.level + 1}
             </p>
           </div>
         </div>
         <div
+          className="stats"
           style={{
             display: 'flex',
             flexWrap: 'wrap',
@@ -119,14 +79,14 @@ export function TodayPage({ tasks, habits, profile }: Props) {
           }}
         >
           <span>
-            Total XP: <b style={{ color: 'var(--color-foreground)' }}>{profile.totalXp}</b>
+            Total XP <b style={{ color: 'var(--color-foreground)' }}>{profile.totalXp}</b>
           </span>
           <span>
-            Best streak today: <b style={{ color: 'var(--color-foreground)' }}>{best}</b> day
+            Best streak <b style={{ color: 'var(--color-foreground)' }}>{best}</b> day
             {best === 1 ? '' : 's'}
           </span>
           <span>
-            Open tasks: <b style={{ color: 'var(--color-foreground)' }}>{openTasks.length}</b>
+            Open tasks <b style={{ color: 'var(--color-foreground)' }}>{openTasks.length}</b>
           </span>
         </div>
       </div>
@@ -167,7 +127,7 @@ function bestStreak(habits: HabitView[]): number {
 }
 
 function TodayTaskRow({ task }: { task: Task }) {
-  const overdue = task.dueAt !== null && task.dueAt.slice(0, 10) < localToday()
+  const overdue = isOverdue(task.dueAt)
   return (
     <li className="row" data-task-row={task.id}>
       <div className="grow">
@@ -176,6 +136,7 @@ function TodayTaskRow({ task }: { task: Task }) {
           <span className="small">
             {overdue ? 'Overdue · ' : 'Due '}
             {task.dueAt.slice(0, 10)}
+            {task.dueAt.length > 10 ? ` ${task.dueAt.slice(11, 16)}` : ''}
           </span>
         )}
       </div>

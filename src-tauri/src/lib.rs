@@ -16,6 +16,7 @@ use tauri::Manager;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_secure_keystore::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             // Open (or create) the SQLite file in the OS app-data folder and run migrations.
             let data_dir = app.path().app_data_dir()?;
@@ -23,6 +24,17 @@ pub fn run() {
 
             // Tauri's own async runtime is tokio, so sqlx works inside it.
             let pool = tauri::async_runtime::block_on(database::connection::init_pool(&db_path))?;
+
+            // Start the reminder loop: it checks every minute for tasks that have
+            // just come due, habits whose reminder time arrived, and the digest.
+            // NOTE (mobile): Android and iOS suspend this in-process loop while the
+            // app is backgrounded, so on-device notifications only fire while the
+            // app is open. Server push (ntfy) is what reaches the phone when the
+            // app is closed. See README "Phone reminders".
+            tauri::async_runtime::spawn(services::notification::run_loop(
+                app.handle().clone(),
+                pool.clone(),
+            ));
 
             app.manage(AppState {
                 db: pool,
@@ -83,6 +95,23 @@ pub fn run() {
             commands::ai::delete_conversation,
             commands::ai::get_ai_settings,
             commands::ai::set_ai_settings,
+            // text-to-speech (JARVIS voice)
+            commands::tts::get_tts_settings,
+            commands::tts::set_tts_settings,
+            commands::tts::open_speech_settings,
+            commands::tts::synth_speech,
+            commands::tts::list_cloud_voices,
+            // phone reminders
+            commands::notification::get_notification_settings,
+            commands::notification::set_notification_settings,
+            commands::notification::send_test_notification,
+            commands::notification::send_due_reminders,
+            // analytics
+            commands::analytics::list_xp_over_time,
+            commands::analytics::list_task_completions,
+            commands::analytics::list_focus_minutes,
+            commands::analytics::list_habit_checkins,
+            commands::analytics::list_analytics_summary,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Habit Planner");

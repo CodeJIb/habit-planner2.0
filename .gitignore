@@ -1,6 +1,12 @@
 node_modules
 dist
 dist-ssr
+# tsc runs with noEmit, so these compiled copies are never regenerated and would
+# shadow the real .ts/.tsx sources at build time (Vite resolves .js first).
+# proxy/src/index.js is genuine source and unaffected.
+/vite.config.js
+/src/**/*.js
+/src/**/*.jsx
 *.local
 *.log
 .vscode/*

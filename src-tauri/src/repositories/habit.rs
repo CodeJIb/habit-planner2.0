@@ -123,3 +123,16 @@ pub async fn completion_dates(
     .await?;
     Ok(dates)
 }
+
+/// Row ids of every completion for a habit, so their XP can be taken back before
+/// the habit (and its completions, by cascade) are deleted.
+pub async fn completion_ids(
+    conn: &mut SqliteConnection,
+    habit_id: i64,
+) -> Result<Vec<i64>, AppError> {
+    let ids = sqlx::query_scalar::<_, i64>("SELECT id FROM habit_completions WHERE habit_id = ?")
+        .bind(habit_id)
+        .fetch_all(&mut *conn)
+        .await?;
+    Ok(ids)
+}

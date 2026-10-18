@@ -3,10 +3,13 @@
 //! (pass `&mut tx`) or on a plain pooled connection (pass `&mut conn`).
 pub mod achievement;
 pub mod ai;
+pub mod analytics;
 pub mod category;
 pub mod focus_session;
 pub mod goal;
 pub mod habit;
+pub mod notification;
 pub mod quest;
+pub mod settings;
 pub mod scheduled_block;
 pub mod task;

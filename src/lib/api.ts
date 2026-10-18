@@ -6,10 +6,14 @@ import type {
   AiMessage,
   AiSettings,
   AiSettingsInput,
+  AnalyticsSummary,
   BlockStatus,
   Category,
   ChatInput,
   ChatResult,
+  CloudVoice,
+  DayCount,
+  DayMinutes,
   FocusResult,
   FocusSession,
   FocusSessionInput,
@@ -23,14 +27,20 @@ import type {
   HabitToggleResult,
   HabitView,
   MilestoneInput,
+  NotificationSettings,
+  NotificationSettingsInput,
   PlayerProfile,
   Quest,
+  ReminderResult,
   ScheduledBlock,
   ScheduledBlockInput,
   Task,
   TaskInput,
   TaskStatus,
   TaskStatusResult,
+  TtsSettings,
+  TtsSettingsInput,
+  XpPoint,
 } from '../types'
 
 /** True when running inside the Tauri window (false in a plain browser tab). */
@@ -50,6 +60,20 @@ async function call<T>(command: string, args?: Record<string, unknown>): Promise
 
 /** Event name the Rust side uses to push streamed assistant text. */
 export const AI_DELTA_EVENT = 'ai:delta'
+
+/**
+ * Synthesise one spoken line with the cloud voice. Resolves to a playable
+ * object URL. This goes through Rust because the browser cannot fetch the
+ * Edge endpoint itself (CORS); the bytes come back as an `ArrayBuffer`.
+ */
+export async function synthSpeech(text: string, voice: string, rate: number): Promise<string> {
+  const buffer = await call<ArrayBuffer>('synth_speech', { text, voice, rate })
+  const bytes = buffer instanceof ArrayBuffer ? buffer : new Uint8Array(buffer as ArrayLike<number>).buffer
+  return URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }))
+}
+
+/** The Edge neural voice catalogue. Never fails — falls back to a built-in English list. */
+export const listCloudVoices = () => call<CloudVoice[]>('list_cloud_voices')
 
 /**
  * Subscribe to streamed assistant text. Resolves to an unsubscribe function.
@@ -124,6 +148,16 @@ export const api = {
   deleteFocusSession: (id: number) => call<void>('delete_focus_session', { id }),
   focusStats: () => call<FocusStats>('focus_stats'),
 
+  // analytics
+  /** Cumulative XP per day; omit `days` for the whole ledger. */
+  listXpOverTime: (days?: number) => call<XpPoint[]>('list_xp_over_time', { days: days ?? null }),
+  listTaskCompletions: (days?: number) =>
+    call<DayCount[]>('list_task_completions', { days: days ?? null }),
+  listFocusMinutes: (days?: number) =>
+    call<DayMinutes[]>('list_focus_minutes', { days: days ?? null }),
+  listHabitCheckins: () => call<string[]>('list_habit_checkins'),
+  getAnalyticsSummary: () => call<AnalyticsSummary>('list_analytics_summary'),
+
   // assistant (JARVIS)
   chat: (request: ChatInput) => call<ChatResult>('ai_chat', { request }),
   /** Same as `chat`, but the assistant's words stream in via `onAiDelta`. */
@@ -133,4 +167,18 @@ export const api = {
   deleteConversation: (id: number) => call<void>('delete_conversation', { id }),
   getAiSettings: () => call<AiSettings>('get_ai_settings'),
   setAiSettings: (input: AiSettingsInput) => call<AiSettings>('set_ai_settings', { input }),
+
+  // phone reminders (ntfy)
+  getNotificationSettings: () => call<NotificationSettings>('get_notification_settings'),
+  setNotificationSettings: (input: NotificationSettingsInput) =>
+    call<NotificationSettings>('set_notification_settings', { input }),
+  /** Push a test notification to the phone. */
+  sendTestNotification: () => call<void>('send_test_notification'),
+  /** Check for due tasks right now and push any alerts. */
+  sendDueReminders: () => call<ReminderResult>('send_due_reminders'),
+
+  // JARVIS text-to-speech
+  getTtsSettings: () => call<TtsSettings>('get_tts_settings'),
+  setTtsSettings: (input: TtsSettingsInput) => call<TtsSettings>('set_tts_settings', { input }),
+  openSpeechSettings: () => call<void>('open_speech_settings'),
 }

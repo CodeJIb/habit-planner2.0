@@ -1,8 +1,7 @@
 //! OpenAI-compatible provider: one HTTP client that speaks the
 //! `/chat/completions` wire format, so the assistant can run against any
 //! compatible backend — a local Ollama (`http://localhost:11434/v1`), Google
-//! Gemini's OpenAI endpoint, Groq, OpenRouter, LM Studio, a self-hosted proxy,
-//! and so on.
+//! Gemini's OpenAI endpoint, Groq, LM Studio, a self-hosted proxy, and so on.
 //!
 //! The internal [`ProviderMessage`]/[`ContentBlock`] shape is Anthropic-flavoured,
 //! so this module translates to and from the OpenAI shape on every call.

@@ -117,13 +117,16 @@ impl GoalService {
         Ok(GoalStatusResult { goal: view, xp })
     }
 
+    /// Deleting a goal also takes back any XP it earned for being completed.
     pub async fn delete_goal(&self, id: i64) -> Result<(), AppError> {
-        let mut conn = self.pool.acquire().await?;
-        if repo::delete(&mut conn, id).await? {
-            Ok(())
-        } else {
-            Err(AppError::NotFound)
+        let mut tx = self.pool.begin().await?;
+        if repo::find(&mut tx, id).await?.is_none() {
+            return Err(AppError::NotFound);
         }
+        gamification::revoke_xp(&mut tx, "goal", id, "Goal deleted").await?;
+        repo::delete(&mut tx, id).await?;
+        tx.commit().await?;
+        Ok(())
     }
 
     pub async fn add_milestone(&self, goal_id: i64, input: MilestoneInput) -> Result<GoalView, AppError> {

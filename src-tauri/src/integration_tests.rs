@@ -19,6 +19,7 @@ use crate::models::habit::HabitInput;
 use crate::models::scheduled_block::ScheduledBlockInput;
 use crate::models::task::TaskInput;
 use crate::services::ai::AiService;
+use crate::services::analytics::AnalyticsService;
 use crate::services::focus_session::FocusSessionService;
 use crate::services::goal::GoalService;
 use crate::services::habit::HabitService;
@@ -366,6 +367,164 @@ fn focus_sessions_award_xp_and_refund_it_on_delete() {
         // The task-linked session is gone, but the other two remain.
         assert!(focus.list(Some(task.id), None).await.unwrap().is_empty());
         assert_eq!(focus.list(None, None).await.unwrap().len(), 2);
+
+        pool.close().await;
+        cleanup(&path);
+    });
+}
+
+#[test]
+fn deleting_completed_work_takes_its_xp_back() {
+    tauri::async_runtime::block_on(async {
+        let path = temp_db_path();
+        let pool = init_pool(&path).await.expect("init pool");
+        let tasks = TaskService::new(pool.clone());
+        let habits = HabitService::new(pool.clone());
+        let today = chrono::Local::now().date_naive().to_string();
+
+        // XP booked against a source (task / habit check-in), i.e. everything a
+        // delete is expected to refund. Achievement XP is permanent and excluded.
+        async fn source_net(
+            pool: &sqlx::SqlitePool,
+            source_type: &str,
+        ) -> i64 {
+            let mut conn = pool.acquire().await.unwrap();
+            sqlx::query_scalar(
+                "SELECT COALESCE(SUM(amount), 0) FROM xp_transactions WHERE source_type = ?",
+            )
+            .bind(source_type)
+            .fetch_one(&mut *conn)
+            .await
+            .unwrap()
+        }
+
+        let task = tasks.create_task(task_input("Ship it")).await.unwrap();
+        tasks.set_status(task.id, "done".to_string()).await.unwrap();
+        let habit = habits.create_habit(habit_input("Stretch")).await.unwrap();
+        habits.toggle_completion(habit.id, &today).await.unwrap();
+
+        let task_earned = source_net(&pool, "task").await;
+        let habit_earned = source_net(&pool, "habit_completion").await;
+        assert!(task_earned > 0 && habit_earned > 0);
+
+        let before = {
+            let mut conn = pool.acquire().await.unwrap();
+            gamification::get_profile(&mut conn).await.unwrap().total_xp
+        };
+
+        // Deleting both completed items refunds exactly the XP they earned.
+        tasks.delete_task(task.id).await.unwrap();
+        habits.delete_habit(habit.id).await.unwrap();
+
+        assert_eq!(source_net(&pool, "task").await, 0);
+        assert_eq!(source_net(&pool, "habit_completion").await, 0);
+
+        let after = {
+            let mut conn = pool.acquire().await.unwrap();
+            gamification::get_profile(&mut conn).await.unwrap().total_xp
+        };
+        assert_eq!(
+            before - after,
+            task_earned + habit_earned,
+            "deleting completed work should refund exactly its XP"
+        );
+
+        pool.close().await;
+        cleanup(&path);
+    });
+}
+
+#[test]
+fn habit_reminders_fire_once_per_day() {
+    tauri::async_runtime::block_on(async {
+        let path = temp_db_path();
+        let pool = init_pool(&path).await.expect("init pool");
+        let habits = HabitService::new(pool.clone());
+
+        let mut input = habit_input("Meditate");
+        input.reminder_time = Some("08:00".to_string());
+        let habit = habits.create_habit(input).await.unwrap();
+        let plain = habits.create_habit(habit_input("Read")).await.unwrap();
+        let today = chrono::Local::now().date_naive().to_string();
+
+        let mut conn = pool.acquire().await.unwrap();
+
+        // Once the clock passes the reminder time the habit is due...
+        let due = crate::repositories::notification::habits_due(&mut conn, "09:00", &today, 10)
+            .await
+            .unwrap();
+        assert!(due.iter().any(|h| h.id == habit.id));
+        // ...and a habit with no reminder time never is.
+        assert!(!due.iter().any(|h| h.id == plain.id));
+
+        // After notifying once it does not fire again the same day.
+        crate::repositories::notification::mark_habit_reminded(&mut conn, habit.id, &today)
+            .await
+            .unwrap();
+        let again = crate::repositories::notification::habits_due(&mut conn, "23:59", &today, 10)
+            .await
+            .unwrap();
+        assert!(!again.iter().any(|h| h.id == habit.id));
+
+        pool.close().await;
+        cleanup(&path);
+    });
+}
+
+#[test]
+fn analytics_reports_xp_tasks_focus_and_streaks() {
+    tauri::async_runtime::block_on(async {
+        let path = temp_db_path();
+        let pool = init_pool(&path).await.expect("init pool");
+
+        let tasks = TaskService::new(pool.clone());
+        let habits = HabitService::new(pool.clone());
+        let focus = FocusSessionService::new(pool.clone());
+        let analytics = AnalyticsService::new(pool.clone());
+
+        let today = chrono::Local::now().date_naive();
+        let yesterday = today - chrono::Duration::days(1);
+
+        for i in 0..2 {
+            let task = tasks.create_task(task_input(&format!("Task {i}"))).await.unwrap();
+            tasks.set_status(task.id, "done".to_string()).await.unwrap();
+        }
+
+        let habit = habits.create_habit(habit_input("Drink water")).await.unwrap();
+        habits.toggle_completion(habit.id, &yesterday.to_string()).await.unwrap();
+        habits.toggle_completion(habit.id, &today.to_string()).await.unwrap();
+
+        let session = focus.start(focus_input(None, 25)).await.unwrap();
+        focus.complete(session.id, 25 * 60).await.unwrap();
+
+        let summary = analytics.summary().await.unwrap();
+        assert!(summary.total_xp > 0);
+        assert!(summary.level >= 1);
+        assert_eq!(summary.tasks_completed, 2);
+        assert_eq!(summary.focus_minutes, 25);
+        assert_eq!(summary.goals_completed, 0);
+        assert_eq!(summary.longest_streak, 2, "two consecutive check-in days");
+
+        // The XP series ends at the profile total, including the days before any window.
+        let xp = analytics.xp_over_time(None).await.unwrap();
+        assert_eq!(xp.last().unwrap().cumulative, summary.total_xp);
+        assert!(xp.windows(2).all(|pair| pair[0].date <= pair[1].date));
+
+        // A window still starts from the true cumulative total, never from zero.
+        let windowed = analytics.xp_over_time(Some(1)).await.unwrap();
+        assert_eq!(windowed.last().unwrap().cumulative, summary.total_xp);
+
+        let tasks_done = analytics.task_completions(Some(14)).await.unwrap();
+        let today_row = tasks_done.iter().find(|row| row.date == today.to_string()).unwrap();
+        assert_eq!(today_row.count, 2);
+
+        let minutes = analytics.focus_minutes(Some(14)).await.unwrap();
+        let today_row = minutes.iter().find(|row| row.date == today.to_string()).unwrap();
+        assert_eq!(today_row.minutes, 25);
+
+        let checkins = analytics.habit_checkins().await.unwrap();
+        assert!(checkins.contains(&today.to_string()));
+        assert!(checkins.contains(&yesterday.to_string()));
 
         pool.close().await;
         cleanup(&path);

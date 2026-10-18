@@ -31,6 +31,7 @@ pub enum ValidatedToolCall {
     CreateHabit(HabitInput),
     CompleteHabit { id: i64 },
     CreateGoal(GoalInput),
+    SendNotification { title: Option<String>, message: String },
 }
 
 pub fn validate(call: &ToolCall) -> Result<ValidatedToolCall, String> {
@@ -95,6 +96,11 @@ pub fn validate(call: &ToolCall) -> Result<ValidatedToolCall, String> {
             description: optional_string(input, "description", MAX_DESCRIPTION)?,
             target_date: optional_string(input, "target_date", MAX_DATE)?,
         })),
+        "send_notification" => {
+            let message = required_string(input, "message", 1000, "send_notification")?;
+            let title = optional_string(input, "title", 120)?;
+            Ok(ValidatedToolCall::SendNotification { title, message })
+        }
         other => Err(format!("Unknown tool '{other}'")),
     }
 }
@@ -329,5 +335,24 @@ mod tests {
             panic!("expected CreateGoal");
         };
         assert_eq!(goal.target_date.as_deref(), Some("2026-12-01"));
+    }
+
+    #[test]
+    fn send_notification_needs_a_message() {
+        let ValidatedToolCall::SendNotification { title, message } = validate(&call(
+            "send_notification",
+            json!({ "title": "Stand up", "message": "Stretch now." }),
+        ))
+        .unwrap()
+        else {
+            panic!("expected SendNotification");
+        };
+        assert_eq!(title.as_deref(), Some("Stand up"));
+        assert_eq!(message, "Stretch now.");
+
+        assert!(validate(&call("send_notification", json!({}))).is_err());
+        assert!(validate(&call("send_notification", json!({ "message": "  " }))).is_err());
+        let long = "x".repeat(1001);
+        assert!(validate(&call("send_notification", json!({ "message": long }))).is_err());
     }
 }

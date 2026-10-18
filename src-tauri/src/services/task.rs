@@ -113,13 +113,17 @@ impl TaskService {
         Ok(TaskStatusResult { task, xp })
     }
 
+    /// Deleting a task also takes back any XP it earned for being completed.
     pub async fn delete_task(&self, id: i64) -> Result<(), AppError> {
-        let mut conn = self.pool.acquire().await?;
-        if repo::delete(&mut conn, id).await? {
-            Ok(())
-        } else {
-            Err(AppError::NotFound)
+        let mut tx = self.pool.begin().await?;
+        if repo::find(&mut tx, id).await?.is_none() {
+            return Err(AppError::NotFound);
         }
+        gamification::revoke_xp(&mut tx, "task", id, "Task deleted").await?;
+        repo::delete(&mut tx, id).await?;
+        quest::recompute(&mut tx, true).await?;
+        tx.commit().await?;
+        Ok(())
     }
 }
 

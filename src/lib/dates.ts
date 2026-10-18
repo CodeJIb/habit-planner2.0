@@ -10,10 +10,20 @@ export function localToday(): string {
   return formatLocalDate(new Date())
 }
 
-/** True when a due date (YYYY-MM-DD or ISO string) is before today. */
-export function isOverdue(dueAt: string | null, today = localToday()): boolean {
+/**
+ * True when a due moment is in the past. Accepts "YYYY-MM-DD" (overdue once the
+ * day has passed) or "YYYY-MM-DDTHH:MM" (overdue once the clock passes that minute).
+ */
+export function isOverdue(dueAt: string | null): boolean {
   if (!dueAt) return false
-  return dueAt.slice(0, 10) < today
+  const date = dueAt.slice(0, 10)
+  const today = localToday()
+  if (date !== today) return date < today
+  if (dueAt.length > 10) {
+    const now = new Date()
+    return dueAt.slice(11, 16) < `${pad(now.getHours())}:${pad(now.getMinutes())}`
+  }
+  return false
 }
 
 export function formatDue(dueAt: string): string {

@@ -39,6 +39,7 @@ function weekDays(): { label: string; date: string }[] {
 export function HabitsPage({ habits, onCreate, onToggle, onDelete }: Props) {
   const [title, setTitle] = useState('')
   const [frequency, setFrequency] = useState<Frequency>('daily')
+  const [reminder, setReminder] = useState('')
   const [busy, setBusy] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<HabitView | null>(null)
 
@@ -48,8 +49,13 @@ export function HabitsPage({ habits, onCreate, onToggle, onDelete }: Props) {
     if (!trimmed || busy) return
     setBusy(true)
     try {
-      await onCreate({ title: trimmed, frequencyType: frequency })
+      await onCreate({
+        title: trimmed,
+        frequencyType: frequency,
+        reminderTime: reminder || null,
+      })
       setTitle('')
+      setReminder('')
     } finally {
       setBusy(false)
     }
@@ -83,6 +89,14 @@ export function HabitsPage({ habits, onCreate, onToggle, onDelete }: Props) {
               <SelectItem value="custom">Custom</SelectItem>
             </SelectContent>
           </Select>
+          <Input
+            type="time"
+            value={reminder}
+            onChange={(e) => setReminder(e.target.value)}
+            aria-label="Reminder time"
+            title="Optional: send a phone reminder at this time"
+            className="w-32"
+          />
           <Button type="submit" disabled={!title.trim() || busy}>
             <Plus className="h-4 w-4" aria-hidden /> Add
           </Button>
@@ -114,6 +128,7 @@ export function HabitsPage({ habits, onCreate, onToggle, onDelete }: Props) {
                 <b>{habit.title}</b>
                 <span className="small">
                   Current streak: {habit.currentStreak} day{habit.currentStreak === 1 ? '' : 's'}
+                  {habit.reminderTime ? ` · Reminder at ${habit.reminderTime}` : ''}
                 </span>
                 <div className="week" aria-label={`This week for ${habit.title}`}>
                   {week.map((day) => {

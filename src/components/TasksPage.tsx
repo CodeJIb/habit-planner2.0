@@ -33,12 +33,13 @@ export function TasksPage({ tasks, onCreate, onToggle, onDelete }: Props) {
   const [title, setTitle] = useState('')
   const [priority, setPriority] = useState<Priority>('medium')
   const [dueAt, setDueAt] = useState('')
+  const [dueTime, setDueTime] = useState('')
   const [busy, setBusy] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<Task | null>(null)
 
   const sorted = [...tasks].sort((a, b) => {
-    const da = a.dueAt ? a.dueAt.slice(0, 10) : '9999-12-31'
-    const db = b.dueAt ? b.dueAt.slice(0, 10) : '9999-12-31'
+    const da = a.dueAt ? a.dueAt.slice(0, 16) : '9999-12-31T99:99'
+    const db = b.dueAt ? b.dueAt.slice(0, 16) : '9999-12-31T99:99'
     return da.localeCompare(db)
   })
 
@@ -48,9 +49,11 @@ export function TasksPage({ tasks, onCreate, onToggle, onDelete }: Props) {
     if (!trimmed || busy) return
     setBusy(true)
     try {
-      await onCreate({ title: trimmed, priority, dueAt: dueAt || null })
+      const due = dueAt ? (dueTime ? `${dueAt}T${dueTime}` : dueAt) : null
+      await onCreate({ title: trimmed, priority, dueAt: due })
       setTitle('')
       setDueAt('')
+      setDueTime('')
     } finally {
       setBusy(false)
     }
@@ -59,7 +62,7 @@ export function TasksPage({ tasks, onCreate, onToggle, onDelete }: Props) {
   return (
     <div>
       <h1>Tasks</h1>
-      <p className="sub">Complete a task to earn XP. The highest priority first.</p>
+      <p className="sub">Complete a task to earn XP. Soonest due first.</p>
 
       <Card>
         <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
@@ -88,6 +91,15 @@ export function TasksPage({ tasks, onCreate, onToggle, onDelete }: Props) {
             onChange={(e) => setDueAt(e.target.value)}
             aria-label="Due date"
             className="w-44"
+          />
+          <Input
+            type="time"
+            value={dueTime}
+            onChange={(e) => setDueTime(e.target.value)}
+            disabled={!dueAt}
+            aria-label="Due time"
+            title="Optional: set a time (a reminder is sent then)"
+            className="w-28"
           />
           <Button type="submit" disabled={!title.trim() || busy}>
             <Plus className="h-4 w-4" aria-hidden /> Add
@@ -129,6 +141,7 @@ export function TasksPage({ tasks, onCreate, onToggle, onDelete }: Props) {
                   >
                     {isOverdue(task.dueAt) ? 'Overdue · ' : 'Due '}
                     {task.dueAt.slice(0, 10)}
+                    {task.dueAt.length > 10 ? ` ${task.dueAt.slice(11, 16)}` : ''}
                   </span>
                 )}
               </div>

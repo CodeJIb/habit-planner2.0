@@ -11,6 +11,7 @@ use crate::errors::AppError;
 use crate::models::gamification::XpOutcome;
 use crate::services::goal::GoalService;
 use crate::services::habit::HabitService;
+use crate::services::notification::NotificationService;
 use crate::services::task::TaskService;
 
 /// What one executed tool tells the model: plain text (fed back as a
@@ -114,6 +115,18 @@ pub fn definitions() -> Vec<Value> {
                 "required": ["title"]
             }
         }),
+        json!({
+            "name": "send_notification",
+            "description": "Send a push notification to the user's phone. Use only when the user asks to be reminded or notified about something specific right now.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "message": { "type": "string", "description": "The notification body." },
+                    "title": { "type": "string", "description": "Optional short title." }
+                },
+                "required": ["message"]
+            }
+        }),
     ]
 }
 
@@ -209,6 +222,17 @@ pub async fn execute(
                 goal.goal.id, goal.goal.title
             )))
         }
+
+        ValidatedToolCall::SendNotification { title, message } => {
+            match NotificationService::new(pool.clone())
+                .send_custom(title.as_deref(), &message)
+                .await
+            {
+                Ok(()) => Ok(ToolOutcome::ok("Sent that notification to your phone.")),
+                Err(AppError::InvalidInput(reason)) => Ok(ToolOutcome::err(reason)),
+                Err(error) => Err(error),
+            }
+        }
     }
 }
 
@@ -217,7 +241,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn definitions_cover_the_five_supported_tools() {
+    fn definitions_cover_the_supported_tools() {
         let defs = definitions();
         let names: Vec<&str> = defs
             .iter()
@@ -230,7 +254,8 @@ mod tests {
                 "complete_task",
                 "create_habit",
                 "complete_habit",
-                "create_goal"
+                "create_goal",
+                "send_notification"
             ]
         );
     }

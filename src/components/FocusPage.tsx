@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from './ui/select'
 import { ConfirmDialog } from './ConfirmDialog'
+import { FocusMusic } from './FocusMusic'
 import type { FocusSession, FocusSessionInput, FocusStats, Task } from '../types'
 
 const DURATIONS = [15, 25, 45, 60]
@@ -92,6 +93,13 @@ export function FocusPage({ sessions, stats, tasks, onStart, onComplete, onCance
       setSecondsLeft(duration * 60)
       setBusy(false)
     }
+  }
+
+  /** One play/pause control for the timer and its music; starts a session if idle. */
+  function togglePlay() {
+    if (busy) return
+    if (!session) void start()
+    else setRunning((r) => !r)
   }
 
   function taskTitle(id: number | null): string {
@@ -207,6 +215,10 @@ export function FocusPage({ sessions, stats, tasks, onStart, onComplete, onCance
           )}
         </div>
       </Card>
+
+      <div style={{ marginTop: '1rem' }}>
+        <FocusMusic playing={running && !!session} onTogglePlay={togglePlay} busy={busy} />
+      </div>
 
       <h2 style={{ marginTop: '1.5rem' }}>History</h2>
 

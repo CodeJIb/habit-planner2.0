@@ -1,56 +1,46 @@
 @import "tailwindcss";
+@import "./fonts.css";
 
-/* Dark mode: toggled from the sidebar, default follows the OS setting. */
-@custom-variant dark (&:is(.dark *));
+/* The app is dark-only (Stark HUD theme); `class="dark"` is set in index.html
+   so the shadcn `dark:` utility variants resolve without any JS. */
 
 :root {
-  --background: #eef1f6;
-  --foreground: #16203a;
-  --card: #ffffff;
-  --card-foreground: #16203a;
-  --popover: #ffffff;
-  --popover-foreground: #16203a;
-  --primary: #2f4bdb;
-  --primary-foreground: #ffffff;
-  --secondary: #e3e8f7;
-  --secondary-foreground: #16203a;
-  --muted: #5c6784;
-  --muted-foreground: #5c6784;
-  --accent: #e3e8f7;
-  --accent-foreground: #16203a;
-  --destructive: #dc2626;
+  color-scheme: dark;
+  /* Stark HUD palette, ported from the Iron Man mockup. */
+  --background: #0a0d16;
+  --background-glow: #2a1218;
+  --foreground: #e8ecf6;
+  --panel: #121827;
+  --line: #2a3350;
+  --card: #121827;
+  --card-foreground: #e8ecf6;
+  --popover: #121827;
+  --popover-foreground: #e8ecf6;
+  --primary: #6fe6ff;
+  --primary-foreground: #0a0d16;
+  --secondary: #1a2036;
+  --secondary-foreground: #e8ecf6;
+  --muted: #8a94b3;
+  --muted-foreground: #8a94b3;
+  --accent: #1a2036;
+  --accent-foreground: #e8ecf6;
+  --destructive: #ff3b3b;
   --destructive-foreground: #ffffff;
-  --border: #d9deea;
-  --input: #d9deea;
-  --ring: #2f4bdb;
-  --radius: 0.625rem;
+  --border: #2a3350;
+  --input: #2a3350;
+  --ring: #6fe6ff;
+  --radius: 0.75rem;
   /* app specific */
-  --xp: #e8a317;
-  --ok: #1f9d74;
-}
-
-.dark {
-  --background: #0f1527;
-  --foreground: #e8ecf8;
-  --card: #18203a;
-  --card-foreground: #e8ecf8;
-  --popover: #18203a;
-  --popover-foreground: #e8ecf8;
-  --primary: #7c93ff;
-  --primary-foreground: #0f1527;
-  --secondary: #222c4c;
-  --secondary-foreground: #e8ecf8;
-  --muted: #9aa5c4;
-  --muted-foreground: #9aa5c4;
-  --accent: #222c4c;
-  --accent-foreground: #e8ecf8;
-  --destructive: #f43f5e;
-  --destructive-foreground: #ffffff;
-  --border: #2b3556;
-  --input: #2b3556;
-  --ring: #7c93ff;
-  --xp: #f2b83d;
+  --xp: #f5b73c;
+  --xp-glow: #ff3b3b;
   --ok: #3ccb9c;
+  /* JARVIS / Iron Man accents (used by the mobile shell and the orb) */
+  --jarvis: #6fe6ff;
+  --jarvis-dim: #2a7a92;
+  --gold: #f5b73c;
+  --red: #c8202c;
+  --red2: #ff3b3b;
+  --mono: ui-monospace, "Cascadia Mono", "Consolas", "SF Mono", monospace;
 }
 
 @theme inline {
@@ -76,6 +66,8 @@
   --color-xp: var(--xp);
   --color-ok: var(--ok);
   --color-success: var(--ok);
+  --color-gold: var(--gold);
+  --color-jarvis: var(--jarvis);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -92,7 +84,9 @@ body,
 
 body {
   margin: 0;
-  background: var(--color-background);
+  background:
+    radial-gradient(circle at 50% -10%, var(--background-glow) 0, var(--background) 55%);
+  background-attachment: fixed;
   color: var(--color-foreground);
   font-family: var(--font-sans);
 }
@@ -110,6 +104,30 @@ body {
   grid-template-columns: 0 minmax(0, 1fr) 22rem;
 }
 
+/* Floating control to bring the collapsed sidebar back (the in-sidebar toggle
+   is hidden along with the sidebar itself). */
+.sidebar-expand {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 0.5rem);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  cursor: pointer;
+}
+
+.sidebar-expand:hover {
+  background: var(--color-accent, rgba(127, 127, 127, 0.12));
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -125,9 +143,12 @@ body {
   align-items: center;
   gap: 0.5rem;
   padding: 0.25rem 0.5rem 1rem;
-  font-family: var(--font-display);
-  font-size: 1.125rem;
+  font-family: var(--mono);
+  font-size: 0.9375rem;
   font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
 }
 
 .sidebar nav {
@@ -153,23 +174,41 @@ body {
 }
 
 .sidebar nav button:hover {
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
+  background: color-mix(in srgb, var(--jarvis) 10%, transparent);
+  color: var(--jarvis);
 }
 
 .sidebar nav button[aria-current='page'] {
-  background: var(--color-secondary);
-  color: var(--color-foreground);
+  background: color-mix(in srgb, var(--jarvis) 14%, transparent);
+  color: var(--jarvis);
   font-weight: 600;
-}
-
-.sidebar nav button [data-soon] {
-  font-size: 0.7rem;
-  color: var(--color-muted);
+  box-shadow: inset 2px 0 0 var(--jarvis);
 }
 
 .sidebar .spacer {
   flex: 1;
+}
+
+/* Action row items (reminders) — same look as the nav entries above them. */
+.sidebar .sidebar-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  padding: 0.5rem 0.625rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebar .sidebar-action:hover {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
 }
 
 .main {
@@ -178,21 +217,78 @@ body {
   padding: 1.5rem 2rem 3rem;
 }
 
+/* The assistant panel is a HUD viewport: cyan border, scanline sweep, grid. */
 .assistant {
+  position: relative;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--color-border);
-  background: var(--color-background);
+  border-left: 1px solid color-mix(in srgb, var(--jarvis) 35%, transparent);
+  background:
+    radial-gradient(circle at 50% 22%, rgba(30, 120, 170, 0.28), rgba(6, 12, 22, 0.95) 70%),
+    repeating-linear-gradient(0deg, rgba(111, 230, 255, 0.04) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(90deg, rgba(111, 230, 255, 0.04) 0 1px, transparent 1px 22px),
+    var(--background);
+  box-shadow: inset 0 0 40px rgba(111, 230, 255, 0.08);
   min-height: 0;
   overflow: hidden;
+}
+
+/* Scanning line that sweeps down the panel. */
+.assistant::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -60px;
+  height: 60px;
+  background: linear-gradient(180deg, transparent, rgba(111, 230, 255, 0.14), transparent);
+  animation: hud-scan 6s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes hud-scan {
+  to {
+    top: 100%;
+  }
+}
+
+.assistant > * {
+  position: relative;
+  z-index: 1;
 }
 
 .assistant header {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 1rem;
-  border-bottom: 1px solid var(--color-border);
+  padding: 0.875rem 1rem 0.5rem;
+  border-bottom: 0;
+}
+
+/* SYS // ONLINE · STARK INDUSTRIES status strip */
+.assistant .hud-status {
+  display: flex;
+  flex: 1;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.15em;
+  color: var(--jarvis);
+  opacity: 0.8;
+}
+
+.assistant .hud-title {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.6em;
+  color: var(--jarvis);
+  text-shadow: 0 0 10px var(--jarvis);
+  padding-left: 0.6em;
+  margin: 0.125rem 0 0.75rem;
 }
 
 .assistant .log {
@@ -200,38 +296,44 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.625rem;
   padding: 1rem;
+  font-family: var(--mono);
 }
 
+/* JARVIS bubbles: cyan-bordered, left-accented, square-ish. */
 .assistant .msg {
   max-width: 85%;
-  border-radius: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
-  font-size: 0.875rem;
+  border-radius: 3px;
+  padding: 0.625rem 0.8125rem;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  line-height: 1.45;
   white-space: pre-wrap;
 }
 
 .assistant .msg.assistant {
   align-self: flex-start;
-  background: var(--color-muted);
-  color: var(--color-background);
+  background: rgba(111, 230, 255, 0.08);
+  border: 1px solid rgba(111, 230, 255, 0.5);
+  border-left: 3px solid var(--jarvis);
+  color: #c9f7ff;
 }
 
+/* User bubbles: transparent outline, like the mockup's .m.u */
 .assistant .msg.user {
   align-self: flex-end;
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: var(--foreground);
 }
 
 .assistant footer {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 1rem;
-  border-top: 1px solid var(--color-border);
+  padding: 0.875rem 1rem calc(0.875rem + env(safe-area-inset-bottom));
+  border-top: 1px solid color-mix(in srgb, var(--jarvis) 25%, transparent);
 }
 
 .assistant footer form {
@@ -242,10 +344,18 @@ body {
 .assistant footer input {
   flex: 1;
   min-width: 0;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-input);
-  background: var(--color-background);
+  border-radius: 3px;
+  border: 1px solid rgba(111, 230, 255, 0.5);
+  background: rgba(6, 16, 28, 0.8);
   padding: 0.5rem 0.75rem;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  color: #c9f7ff;
+}
+
+.assistant footer input::placeholder {
+  color: var(--jarvis);
+  opacity: 0.6;
 }
 
 .assistant footer [data-disabled] {
@@ -253,7 +363,7 @@ body {
 }
 
 .assistant .msg.thinking {
-  color: var(--color-muted);
+  color: var(--jarvis);
   font-style: italic;
 }
 
@@ -275,13 +385,34 @@ body {
   }
 }
 
+/* Suggestion chips: transparent cyan outline, mono, square corners. */
+.assistant .chip,
+.chip {
+  background: transparent;
+  border: 1px solid rgba(111, 230, 255, 0.5);
+  color: var(--jarvis);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  padding: 0.375rem 0.625rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.assistant .chip:hover,
+.chip:hover {
+  background: rgba(111, 230, 255, 0.12);
+  border-color: var(--jarvis);
+}
+
 /* conversation switcher row above the log */
 .assistant-threads {
   display: flex;
   align-items: center;
   gap: 0.375rem;
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid color-mix(in srgb, var(--jarvis) 20%, transparent);
 }
 
 /* settings drawer (API key + model) */
@@ -312,37 +443,38 @@ body {
   color: var(--color-muted);
 }
 
-/* voice orb */
-.orb {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 9999px;
-  flex: none;
-  background: radial-gradient(circle at 35% 30%, #fff 0, var(--primary) 45%, #1a2a8c 100%);
-  box-shadow: 0 0 0 6px var(--color-accent);
-  animation: orb-pulse 3.2s ease-in-out infinite;
+/* voice section: dropdown, sliders, test button */
+.assistant-settings fieldset.voice-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
-@keyframes orb-pulse {
-  50% {
-    box-shadow: 0 0 0 12px var(--color-accent);
-  }
+.assistant-settings fieldset.voice-settings legend {
+  padding: 0 0.25rem;
+  font-size: 0.75rem;
+  color: var(--color-muted);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .orb {
-    animation: none;
-  }
+.assistant-settings input[type='range'] {
+  width: 100%;
+  accent-color: var(--color-primary);
 }
 
-/* ---- shared screen helpers ---- */
-
-.screen h1 {
+/* Screen headings: mono, tracked, gold — the HUD's page titles. */
+.screen h1,
+.main > .screen > h1,
+h1 {
   margin: 0 0 0.25rem;
   font-family: var(--font-display);
-  font-size: 1.875rem;
+  font-size: 1.625rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.02em;
+  color: var(--foreground);
 }
 
 .screen .sub {
@@ -350,11 +482,54 @@ body {
   color: var(--color-muted);
 }
 
+/* ---- HUD card language (Stark / Iron Man) ----
+   Every .card gets gold L-corner brackets and a mono uppercase label, so the
+   whole app reads like a suit HUD panel. */
+
 .card {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: var(--color-card);
+  background: linear-gradient(160deg, var(--panel), #0e1320);
   padding: 1rem;
+  position: relative;
+}
+
+.card::before,
+.card::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--gold);
+  pointer-events: none;
+}
+
+.card::before {
+  top: -1px;
+  left: -1px;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: var(--radius-lg) 0 0 0;
+}
+
+.card::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: 0;
+  border-top: 0;
+  border-radius: 0 0 var(--radius-lg) 0;
+}
+
+/* Section labels inside cards: small, mono, tracked-out. */
+.card h2,
+.card legend {
+  margin: 0 0 0.625rem;
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mute);
 }
 
 .row {
@@ -388,50 +563,71 @@ body {
   font-size: 0.75rem;
 }
 
+/* primary action: the mockup's red→red2 gradient button */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
+  border: 0;
   border-radius: var(--radius-md);
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
+  background: linear-gradient(180deg, var(--red2), var(--red));
+  color: #fff;
   padding: 0.375rem 0.875rem;
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
+}
+
+.btn:hover {
+  filter: brightness(1.12);
+}
+
+.btn:active {
+  transform: translateY(1px);
 }
 
 .btn:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+  filter: none;
+  transform: none;
 }
 
 .btn-outline {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--line);
   background: transparent;
+  color: var(--foreground);
+}
+
+.btn-outline:hover {
+  background: var(--accent);
+  border-color: var(--jarvis);
+  color: var(--jarvis);
 }
 
 .btn-danger {
-  background: var(--color-destructive);
-  color: var(--color-destructive-foreground);
+  background: linear-gradient(180deg, var(--red2), var(--red));
+  color: #fff;
 }
 
-/* progress bar */
+/* progress bar: red → gold, like the mockup's XP fill */
 .bar {
   height: 0.5rem;
   width: 100%;
   overflow: hidden;
-  border-radius: 9999px;
-  background: var(--color-accent);
+  border-radius: 6px;
+  background: #1b2338;
 }
 
 .bar > i {
   display: block;
   height: 100%;
-  background: var(--color-xp);
-  border-radius: 9999px;
-  transition: width 0.4s;
+  background: linear-gradient(90deg, var(--red), var(--gold));
+  box-shadow: 0 0 10px var(--xp-glow);
+  border-radius: 6px;
+  transition: width 0.5s;
 }
 
 /* XP pill */
@@ -442,33 +638,33 @@ body {
   white-space: nowrap;
 }
 
-/* priority tag */
+/* priority / status tag: gold outline pill */
 .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--gold);
   border-radius: 9999px;
   padding: 0.125rem 0.5rem;
-  font-size: 0.7rem;
+  font-size: 0.6875rem;
   font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: capitalize;
+  color: var(--gold);
+  background: transparent;
+  white-space: nowrap;
 }
 
-.tag.high {
-  background: #fde4e1;
-  color: #b3261e;
-}
-
+.tag.high,
 .tag.urgent {
-  background: #fee2e2;
-  color: #b91c1c;
+  border-color: var(--red2);
+  color: var(--red2);
 }
 
-.dark .tag.high {
-  background: #4a2530;
-  color: #ff9b93;
-}
-
-.dark .tag.urgent {
-  background: #4a2530;
-  color: #ff9b93;
+.tag.low,
+.tag.medium {
+  border-color: var(--gold);
+  color: var(--gold);
 }
 
 /* week strip (habit check-in calendar) */
@@ -521,4 +717,561 @@ body {
 .toast.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+/* Spotify-style focus music bar */
+.focus-music {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: #181818;
+  color: #fff;
+}
+
+.focus-music-art {
+  width: 3.5rem;
+  height: 3.5rem;
+  flex: none;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  background: #282828;
+}
+
+.focus-music-art-icon {
+  display: grid;
+  place-items: center;
+  color: #b3b3b3;
+}
+
+/* The synthesised track has no cover art: glow the icon instead. */
+.focus-music-art-live {
+  color: #1db954;
+  background: radial-gradient(circle at 50% 50%, #1db95433, #282828 70%);
+}
+
+.focus-music-art-live svg {
+  animation: focus-glow 2.6s ease-in-out infinite;
+}
+
+@keyframes focus-glow {
+  50% {
+    opacity: 0.55;
+    transform: scale(1.08);
+  }
+}
+
+.focus-music-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.focus-music-title {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.focus-music-artist {
+  display: block;
+  font-size: 0.75rem;
+  color: #b3b3b3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.focus-music-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: #b3b3b3;
+}
+
+.focus-music-track {
+  flex: 1;
+  height: 4px;
+  border-radius: 9999px;
+  background: #4d4d4d;
+  overflow: hidden;
+}
+
+.focus-music-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: #1db954;
+  transition: width 0.25s linear;
+}
+
+/* Unlimited track: sweep the fill back and forth as a "still playing" cue. */
+.focus-music-fill--loop {
+  width: 35%;
+  transition: none;
+  animation: focus-sweep 2.4s ease-in-out infinite;
+}
+
+@keyframes focus-sweep {
+  0%,
+  100% {
+    margin-left: 0;
+  }
+  50% {
+    margin-left: 65%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-music-art-live svg,
+  .focus-music-fill--loop {
+    animation: none;
+  }
+  .focus-music-fill--loop {
+    width: 100%;
+  }
+}
+
+.focus-music-icon {
+  display: grid;
+  place-items: center;
+  padding: 0.25rem;
+  border: none;
+  background: none;
+  color: #b3b3b3;
+  cursor: pointer;
+}
+
+.focus-music-icon:hover {
+  color: #fff;
+}
+
+.focus-music-icon[aria-pressed='true'] {
+  color: #1db954;
+}
+
+.focus-music-play {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  border: none;
+  border-radius: 50%;
+  background: #1db954;
+  color: #000;
+  cursor: pointer;
+  transition: transform 0.1s, background 0.15s;
+}
+
+.focus-music-play:hover {
+  transform: scale(1.05);
+  background: #1ed760;
+}
+
+.focus-music-play:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
+}
+
+/* ==== JARVIS orb (JarvisOrb.tsx) ========================================= */
+
+.jv {
+  position: relative;
+  display: inline-block;
+  width: 3rem;
+  height: 3rem;
+  flex: none;
+  border-radius: 50%;
+  color: var(--jarvis);
+}
+
+.jv-sm {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+/* Rotating radar sweep. */
+.jv::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 72%,
+    color-mix(in srgb, var(--jarvis) 65%, transparent) 92%,
+    transparent 100%
+  );
+  opacity: 0.5;
+  animation: scan 4s linear infinite;
+}
+
+.jv-core {
+  position: absolute;
+  inset: 30%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #eafcff, var(--jarvis) 52%, var(--jarvis-dim) 100%);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--jarvis) 70%, transparent);
+  animation: pulse 2.6s ease-in-out infinite;
+}
+
+.jv-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--jarvis) 60%, transparent);
+}
+
+.jv-ring--outer {
+  inset: 5%;
+  border-style: dashed;
+  animation: spin 14s linear infinite;
+}
+
+.jv-ring--mid {
+  inset: 18%;
+  border-width: 2px;
+  /* A slow spin layered with a gentle ripple. */
+  animation: spin 8s linear infinite reverse, wave 2.6s ease-in-out infinite;
+}
+
+/* Speaking / thinking: everything quickens. */
+.jv[data-talking='true'] .jv-core {
+  animation-duration: 0.9s;
+}
+.jv[data-talking='true'] .jv-ring--outer {
+  animation-duration: 5s;
+}
+.jv[data-talking='true'] .jv-wave i {
+  animation-duration: 0.35s;
+}
+
+/* Mini waveform over the core (the mockup's .w bars). */
+.jv-wave {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.jv-wave i {
+  display: block;
+  width: 2px;
+  height: 10px;
+  border-radius: 2px;
+  background: #fff;
+  transform-origin: center;
+  animation: wave-bar 1.6s ease-in-out infinite;
+}
+
+.jv-wave i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.jv-wave i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.jv-wave i:nth-child(4) {
+  animation-delay: 0.45s;
+}
+.jv-wave i:nth-child(5) {
+  animation-delay: 0.6s;
+}
+
+@keyframes wave-bar {
+  50% {
+    transform: scaleY(2.4);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes wave {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes scan {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jv::before,
+  .jv-core,
+  .jv-ring {
+    animation: none !important;
+  }
+}
+
+/* ==== full-size arc reactor (JarvisHud.tsx) ============================== */
+
+.reactor {
+  display: block;
+  width: 210px;
+  height: 210px;
+  margin: 0 auto;
+  filter: drop-shadow(0 0 16px rgba(111, 230, 255, 0.7));
+}
+
+.reactor-ring--r1 {
+  transform-origin: 100px 100px;
+  animation: spin 30s linear infinite;
+}
+
+.reactor-ring--r2 {
+  transform-origin: 100px 100px;
+  animation: spin 12s linear infinite reverse;
+}
+
+.reactor-ring--r3 {
+  transform-origin: 100px 100px;
+  animation: spin 7s linear infinite;
+}
+
+.reactor-core {
+  animation: reactor-pulse 3s ease-in-out infinite;
+}
+
+.reactor-wave rect {
+  transform-box: fill-box;
+  transform-origin: center;
+  fill: #fff;
+  animation: wave-bar 1.6s ease-in-out infinite;
+}
+
+.reactor-wave rect:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.reactor-wave rect:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.reactor-wave rect:nth-child(4) {
+  animation-delay: 0.45s;
+}
+.reactor-wave rect:nth-child(5) {
+  animation-delay: 0.6s;
+}
+
+/* Speaking / thinking: core pulses faster, bars beat quicker. */
+.reactor[data-talking='true'] .reactor-core {
+  animation-duration: 0.6s;
+}
+.reactor[data-talking='true'] .reactor-wave rect {
+  animation-duration: 0.35s;
+}
+
+@keyframes reactor-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reactor-ring,
+  .reactor-core,
+  .reactor-wave rect {
+    animation: none !important;
+  }
+}
+
+/* ==== mobile shell (Iron Man / JARVIS) ===================================
+   Below 768px the three-column desktop layout is replaced by a top status bar,
+   a bottom icon nav, and the assistant as a full-screen overlay opened from the
+   orb. At 768px and wider the desktop layout is untouched. */
+
+/* The host is invisible to the desktop grid so the assistant stays a column. */
+.jarvis-host {
+  display: contents;
+}
+
+/* Hidden until the mobile media query turns them on. */
+.mobile-topbar,
+.mobile-nav,
+.jarvis-close {
+  display: none;
+}
+
+@media (max-width: 767.98px) {
+  /* Collapse to a single main column (ignore any sidebar collapse state).
+     The top bar is auto height, main takes the rest and scrolls itself. */
+  .app,
+  .app[data-collapsed='true'] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .sidebar,
+  .sidebar-expand {
+    display: none !important;
+  }
+
+  /* --- top status bar --- */
+  .mobile-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: calc(0.5rem + env(safe-area-inset-top)) 0.75rem 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-background) 88%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  .mobile-brand {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .mobile-topbar .icon-btn {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex: none;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--color-foreground);
+    cursor: pointer;
+  }
+
+  .mobile-topbar .orb-toggle {
+    border-color: color-mix(in srgb, var(--jarvis) 55%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--jarvis) 30%, transparent),
+      0 0 12px color-mix(in srgb, var(--jarvis) 25%, transparent);
+  }
+
+  /* --- bottom nav --- */
+  .mobile-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: flex;
+    gap: 0.125rem;
+    padding: 0.25rem 0.375rem calc(0.25rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-card) 92%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  .mobile-nav button {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    padding: 0.25rem 0;
+    color: var(--color-muted);
+    font-size: 0.625rem;
+    cursor: pointer;
+  }
+
+  .mobile-nav button svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .mobile-nav button[aria-current='page'] {
+    color: var(--jarvis);
+    background: color-mix(in srgb, var(--jarvis) 12%, transparent);
+  }
+
+  /* --- main content clears the fixed bottom nav --- */
+  .main {
+    padding: 0.875rem 0.875rem 5.25rem;
+  }
+
+  /* --- assistant as a full-screen overlay --- */
+  .jarvis-host {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: var(--color-background);
+    transform: translateY(100%);
+    transition: transform 0.28s ease;
+    pointer-events: none;
+  }
+
+  .jarvis-host[data-open='true'] {
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .jarvis-host .assistant {
+    height: 100%;
+    border-left: 0;
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .jarvis-close {
+    position: fixed;
+    top: calc(0.625rem + env(safe-area-inset-top));
+    right: 0.625rem;
+    z-index: 51;
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 9999px;
+    background: var(--color-card);
+    color: var(--color-foreground);
+    cursor: pointer;
+  }
+
+  /* The top-bar orb is the real JARVIS control on a phone. */
+  .assistant header .orb {
+    display: none;
+  }
+}
+
+/* Reduced motion: never animate the shell. */
+@media (prefers-reduced-motion: reduce) {
+  .jarvis-host {
+    transition: none;
+  }
 }

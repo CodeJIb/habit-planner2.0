@@ -107,35 +107,6 @@ pub async fn list_messages(
     Ok(messages)
 }
 
-pub async fn get_setting(conn: &mut SqliteConnection, key: &str) -> Result<Option<String>, AppError> {
-    let value = sqlx::query_scalar::<_, String>("SELECT value FROM app_settings WHERE key = ?")
-        .bind(key)
-        .fetch_optional(&mut *conn)
-        .await?;
-    Ok(value)
-}
-
-pub async fn set_setting(
-    conn: &mut SqliteConnection,
-    key: &str,
-    value: &str,
-) -> Result<(), AppError> {
-    let sql = format!(
-        "INSERT INTO app_settings (key, value) VALUES (?1, ?2)
-         ON CONFLICT(key) DO UPDATE SET value = ?2, updated_at = {NOW}"
-    );
-    sqlx::query(&sql)
-        .bind(key)
-        .bind(value)
-        .execute(&mut *conn)
-        .await?;
-    Ok(())
-}
-
-pub async fn delete_setting(conn: &mut SqliteConnection, key: &str) -> Result<(), AppError> {
-    sqlx::query("DELETE FROM app_settings WHERE key = ?")
-        .bind(key)
-        .execute(&mut *conn)
-        .await?;
-    Ok(())
-}
+// The key/value helpers live in `repositories::settings`; re-exported here so
+// existing callers (`repositories::ai::get_setting`, ...) keep working.
+pub use super::settings::{delete_setting, get_setting, set_setting};

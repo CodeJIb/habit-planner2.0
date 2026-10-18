@@ -62,7 +62,31 @@ pub fn compute_streak(dates: &[NaiveDate], today: NaiveDate) -> i64 {
     streak
 }
 
-async fn load_dates(conn: &mut SqliteConnection, habit_id: i64) -> Result<Vec<NaiveDate>, AppError> {
+/// Longest run of consecutive days inside `dates`; order and duplicates do not matter.
+pub fn longest_run(dates: &[NaiveDate]) -> i64 {
+    let mut sorted: Vec<NaiveDate> = dates.to_vec();
+    sorted.sort_unstable();
+    sorted.dedup();
+
+    let mut best = 0;
+    let mut run = 0;
+    let mut previous: Option<NaiveDate> = None;
+    for date in sorted {
+        run = match previous {
+            Some(prev) if prev + Duration::days(1) == date => run + 1,
+            _ => 1,
+        };
+        best = best.max(run);
+        previous = Some(date);
+    }
+    best
+}
+
+/// Completed dates ("YYYY-MM-DD") for a habit, parsed and ready for streak maths.
+pub async fn load_dates(
+    conn: &mut SqliteConnection,
+    habit_id: i64,
+) -> Result<Vec<NaiveDate>, AppError> {
     let raw = repo::completion_dates(conn, habit_id).await?;
     Ok(raw
         .iter()
@@ -110,13 +134,20 @@ impl HabitService {
         repo::update(&mut conn, id, &input).await?.ok_or(AppError::NotFound)
     }
 
+    /// Deleting a habit also takes back the XP earned from every check-in.
     pub async fn delete_habit(&self, id: i64) -> Result<(), AppError> {
-        let mut conn = self.pool.acquire().await?;
-        if repo::delete(&mut conn, id).await? {
-            Ok(())
-        } else {
-            Err(AppError::NotFound)
+        let mut tx = self.pool.begin().await?;
+        if repo::find(&mut tx, id).await?.is_none() {
+            return Err(AppError::NotFound);
         }
+        for completion_id in repo::completion_ids(&mut tx, id).await? {
+            gamification::revoke_xp(&mut tx, "habit_completion", completion_id, "Habit deleted")
+                .await?;
+        }
+        repo::delete(&mut tx, id).await?;
+        quest::recompute(&mut tx, true).await?;
+        tx.commit().await?;
+        Ok(())
     }
 
     /// Check a habit in (or undo the check-in) for one local date.
@@ -202,6 +233,27 @@ mod tests {
     fn gap_ends_the_streak() {
         let dates = [d("2026-10-16"), d("2026-10-14")];
         assert_eq!(compute_streak(&dates, d("2026-10-16")), 1);
+    }
+
+    #[test]
+    fn longest_run_finds_the_best_stretch() {
+        // 12th-14th and 16th-18th, given out of order and with duplicates.
+        let dates = [
+            d("2026-10-17"),
+            d("2026-10-12"),
+            d("2026-10-18"),
+            d("2026-10-13"),
+            d("2026-10-16"),
+            d("2026-10-14"),
+            d("2026-10-13"),
+        ];
+        assert_eq!(longest_run(&dates), 3);
+    }
+
+    #[test]
+    fn longest_run_of_nothing_is_zero() {
+        assert_eq!(longest_run(&[]), 0);
+        assert_eq!(longest_run(&[d("2026-10-16")]), 1);
     }
 
     #[test]

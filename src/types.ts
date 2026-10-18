@@ -58,6 +58,7 @@ export interface HabitInput {
   frequencyType: Frequency
   frequencyConfig?: string | null
   targetCount?: number | null
+  reminderTime?: string | null
 }
 
 export interface Category {
@@ -264,4 +265,99 @@ export interface AiSettingsInput {
   baseUrl?: string | null
   /** null/omitted leaves the model unchanged; empty string resets the default. */
   model?: string | null
+}
+
+/** Phone reminders, delivered through a free ntfy.sh topic. */
+export interface NotificationSettings {
+  enabled: boolean
+  /** The topic the phone subscribes to. Empty means "not set up yet". */
+  topic: string
+  /** Empty means the public https://ntfy.sh server. */
+  server: string
+}
+
+export interface NotificationSettingsInput {
+  enabled?: boolean
+  /** Omitted leaves it unchanged; empty string clears it. */
+  topic?: string
+  /** Omitted leaves it unchanged; empty string clears it. */
+  server?: string
+}
+
+/** How many alerts a manual check pushed. */
+export interface ReminderResult {
+  sent: number
+}
+
+export type TtsSource = 'cloud' | 'system'
+
+/** One voice from the Edge neural catalogue, for the cloud voice picker. */
+export interface CloudVoice {
+  /** Short name sent back for synthesis, e.g. "en-GB-RyanNeural". */
+  id: string
+  /** Dropdown text, e.g. "Ryan (Male, en-GB)". */
+  label: string
+  /** BCP-47 locale, used to sort British voices to the top. */
+  locale: string
+}
+
+/** JARVIS text-to-speech settings, persisted in `app_settings`. */
+export interface TtsSettings {
+  enabled: boolean
+  /** Where speech is produced: "cloud" (Edge neural voices) or "system" (offline). */
+  source: TtsSource
+  /** Voice name as reported by the OS. Empty means "auto-pick a voice". */
+  voice: string
+  /** Edge voice short name (e.g. "en-GB-RyanNeural") when source is "cloud". */
+  cloudVoice: string
+  /** 1.0 is normal speed; clamped to 0.5–2.0. */
+  rate: number
+  /** 1.0 is normal pitch; clamped to 0.5–2.0. System voice only. */
+  pitch: number
+}
+
+export interface TtsSettingsInput {
+  enabled?: boolean
+  source?: TtsSource
+  /** Omitted leaves it unchanged; empty string means "auto-pick". */
+  voice?: string
+  /** Omitted leaves it unchanged. */
+  cloudVoice?: string
+  rate?: number
+  pitch?: number
+}
+
+/** One day on the XP-over-time chart: earned that day and the running total after it. */
+export interface XpPoint {
+  date: string
+  amount: number
+  cumulative: number
+}
+
+export interface DayCount {
+  date: string
+  count: number
+}
+
+export interface DayMinutes {
+  date: string
+  minutes: number
+}
+
+export interface AnalyticsSummary {
+  totalXp: number
+  level: number
+  longestStreak: number
+  tasksCompleted: number
+  focusMinutes: number
+  goalsCompleted: number
+}
+
+/** Everything the Analytics screen shows, fetched together when it opens. */
+export interface Analytics {
+  xp: XpPoint[]
+  taskCompletions: DayCount[]
+  focusMinutes: DayMinutes[]
+  habitCheckins: string[]
+  summary: AnalyticsSummary
 }
