@@ -15,3 +15,10 @@ dist-ssr
 .DS_Store
 src-tauri/target
 src-tauri/gen
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
