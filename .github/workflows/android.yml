@@ -15,9 +15,14 @@ jobs:
           node-version: 20
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+          targets: aarch64-linux-android
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "ndk;27.0.12077973" "platforms;android-35" "build-tools;35.0.0"
+      - run: npm ci
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
         with:
-          args: --target aarch64-linux-android
+          args: android build --target aarch64-linux-android
